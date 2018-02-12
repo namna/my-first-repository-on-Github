@@ -1,0 +1,123 @@
+farmer_market<-read.csv("farmers_market.csv",header = T,sep = "," , na.strings = "")
+# clean the facebook column
+farmer_market$Facebook<-str_replace_all(farmer_market$Facebook, "((h?t?t?p?s?)?:\\/\\/)?(w*w*w*\\.)*(Facebook|facebook)?\\.(com)?|Check us out on Facebook!|on website|Www.facebook.com|fb.com|fb.com|/pages|groups|/[0-9].*|-[0-9].*|/|\\?[a-z].*|#!|None|@|https:|na|no|m|yes|ne", "")
+# removing dahses with space in facebook column.
+farmer_market$Facebook<-str_replace_all(farmer_market$Facebook, "-", " ")
+# cleans the twitter column
+farmer_market$Twitter<-str_replace_all(farmer_market$Twitter,"((h?t?t?p?s?)?:\\/\\/)?(w*w*w*\\.)*(twitter)?\\.(com)?\\/|@|\\/|\\/\\/|no|None|Follow us on Twitter|https:Twitter|yes|na|none|NA|\t|ne|na|\\?[a-z].*", "")
+## METHOD 1 
+
+# using separate function to split the city column into county and state and then remove the new formed state column. The new data framne named Framer_mark which contains county name.
+farmer_mark<- separate(farmer_market,city,into = c("city", "state"), sep = ",")  
+farmer_mark$state<-NULL 
+View(farmer_mark)
+# ____________________________________________________________
+# METHOD 2
+# By using str_replace_all function, a new dataframe "farm_mark" is created which removes the unwanted state name after county by using the following regular expression.
+
+str_replace_all(farmer_market$city, ",\\s[A-z].*", " ") 
+
+# Making the street column consistent by following steps.
+# chnage all avenues to ave
+farmer_market$street<-str_replace_all(farmer_market$street, "(Avenue|Ave|ave|Ave|ave\\.|Av)", "ave")
+# change all boulevards to blvd
+farmer_market$street<-str_replace_all(farmer_market$street, "(Boulevard|Blvd\\.)", "Blvd")
+# change all drives to Dr
+farmer_market$street<-str_replace_all(farmer_market$street, "(Drive|Drove|Dr\\.)", "Dr")
+# chnag eall streets to st
+farmer_market$street<-str_replace_all(farmer_market$street,"Street|Streets|street|Road|St|Rd|sts|St|STREET|ST|Streets|Steet|St\\.|Sts\\.|st\\.|sts", "st")
+# change all pikes to Pk
+farmer_market$street<-str_replace_all(farmer_market$street, "(Tpke|Pike)", "Pk") 
+# chnage all roads to Rd.
+farmer_market$street<-str_replace_all(farmer_market$street, "Road|Rd.", "Rd")
+# make street more uniform
+farmer_market$street<-str_replace_all(farmer_market$street, "sts", "st")
+# making street column more consistent.
+farmer_market$street<-str_replace_all(farmer_market$street, "st\\.|St\\.|Sts\\.", "st")
+# making all highways -> hwy
+farmer_market$street<-str_replace_all(farmer_market$street, "Highway|Hwy|HWY", "hwy")
+library("tibble")
+# Count the total number of states that had facebook presence and get their respective percentages.
+face_gp<-group_by(farmer_market, State)
+face_per<-summarise(face_gp,total_face = n(), facebook_percentage = mean(!is.na(Facebook))*100)
+# Count the number of states iwth twitter presence and get their respective percentages.
+twit_gp<-group_by(farmer_market, State)
+twit_per<-summarise(twit_gp,total_twi = n(), twitter_percentage = mean(!is.na(Twitter))*100)
+
+# select the facebook percentage column and twitter percentage column to make a tibble.
+x<- select(face_per, State, facebook_percentage)
+y<- select(twit_per, State, twitter_percentage)
+z<-merge(x,y)
+z
+# make a tibble using as.tibble function.
+as.tibble(z)
+# Chnage the names of the location column by using `forcats::fct_recode` function
+ farmer_market$Location<-fct_recode(farmer_market$Location,
+    "Empty" = "", 
+    "Private Business" = "Private business parking lot",
+    "goverment" = "Federal/State government building grounds",
+    "Farm" = "On a farm from: a barn, a greenhouse, a tent, a stand, etc",
+    "Other"= "Other",
+    "Faith_institute" = "Faith-based institution (e.g., church, mosque, synagogue, temple)", 
+    "Public st" = "Closed-off public street", 
+    "Goverment" = "Local government building grounds", 
+    "Wholesale market" = "Co-located with wholesale market facility",
+    "Educational" = "Educational institution", 
+    "Health" = "Healthcare Institution")
+
+# Count the number of markets per location and arrange them in descending order.               
+data_location<-group_by(farmer_market, Location) 
+mrk_loca<-summarise(data_location, count= n())
+mrk_desc<-arrange(mrk_loca, desc(mrk_loca$count) )
+
+# plot a graph to show all locations with respect to farmer's markets in that location arranged in descending #order.
+ggplot(data = mrk_desc)+          
+  geom_point(mapping = aes(x = mrk_desc$count, y = reorder(mrk_desc$Location, mrk_desc$count) )  )
+library("xlsx")
+# read the xl file.
+project<- read.xlsx2("kyfprojects.xls", 1)
+View(project)
+
+# METHOD 1
+#split the column into 5 columns
+project_cols<- separate(project, Program.Name, into = c("A", "B", "C", "D", "E"), sep = "\\s+")
+# split the first column into two columns
+project_A<-separate(project_cols, "A", into = c("a", "b"), sep = "-" )
+# choose the required columns
+project_col<- select(project_A, "a", "b", "B", "C" , "D", "E")
+# choose the first letter of all selected columns
+abbrv_first<- str_sub(project_col$a, 1, 1)
+# choose the first letter of second column.
+abbrv_sec<- str_sub(project_cols$b, 1, 1)
+# remove the NA values
+abbrv_sec[is.na(abbrv_sec)]<- ""
+# select the first letter of third column
+abbrv_third<- str_sub(project_cols$B, 1, 1) # replace and with ""
+# remove the unwanted letter
+abbrv_third[abbrv_third == "a"]<-""
+# choose the first letter of fourth column
+abbrv_four<-str_sub(project_cols$C, 1, 1)
+# remove unwanted letter and NA values
+abbrv_four[abbrv_four == "a"]<-""
+abbrv_four[is.na(abbrv_four)]<- ""
+# choose the first letter of fifth column
+abbrv_five<- str_sub(project_cols$D, 1, 1)
+# remove the unwanted letter and NA valus
+abbrv_five[abbrv_five == "a"]<-""
+abbrv_five[is.na(abbrv_five)]<- ""
+# select the first letter of sixth column and remove NA values
+abbrv_six<- str_sub(project_cols$E, 1, 1) 
+abbrv_six[is.na(abbrv_six)]<- ""
+# combine all the letters together
+words<- str_c( abbrv_first, abbrv_sec, abbrv_third, abbrv_four, abbrv_five, abbrv_six) 
+# compare two columns to check for sanity check. (Program.Abbreviation) column with the newly made words column
+col_to_match<-select(project,Program.Abbreviation)
+setdiff(words, col_to_match)
+
+#_______________________________________________________
+# METHOD 2
+# use abbreviate function to get the abbreviations for program names 
+prog_name<-abbreviate(project$Program.Name)
+# check the difference between the Program.Abbreviation column and Program.Name column.
+setdiff(prog_name, project$Program.Abbreviation)
+
