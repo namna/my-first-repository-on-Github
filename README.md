@@ -1,2 +1,2 @@
-# my-first-repository-on-Github
+# my-first-repository-on-Githu
 Data cleaning
